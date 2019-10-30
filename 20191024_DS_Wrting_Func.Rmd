@@ -1,0 +1,155 @@
+---
+title: "iteration"
+author: "Yuqi Miao"
+date: "10/24/2019"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(rvest)
+```
+
+
+# writing functions
+
+## get started
+
+```{r}
+x <-  rnorm(30,4,2.3)
+z_trans <- (x-mean(x))/sd(x)
+x2 <-  rnorm(30,6,0.4)
+
+```
+
+### fuction
+
+```{r}
+z_score <- function(x) {
+   (x-mean(x))/sd(x)
+}
+
+z2_trans <- z_score(x2)
+```
+
+### try out
+
+```{r}
+z_score <- function(x) {
+    if(!is.numeric(x)){
+        stop("x should be numeric")
+    }else if(length(x)<3){
+        stop("x should be longer than 3")
+    }
+   (x-mean(x))/sd(x)
+}
+
+
+z_score(sample(c(TRUE, FALSE), 25, replace = TRUE))
+z_score(3)
+
+
+
+```
+
+
+## Multiple outputs
+
+```{r}
+mean_and_sd <- function(input_x){
+    if(!is.numeric(x)){
+        stop("x should be numeric")
+    }else if(length(x)<3){
+        stop("x should be longer than 3")
+    }
+
+    list(
+        mean_input = mean(input_x),
+        sd = sd(input_x),
+        z_score = (input_x-mean(input_x))/sd(input_x)
+    )
+}
+
+mean_and_sd(x)
+```
+
+## multiple input
+
+```{r}
+
+sim_data = tibble(
+  x = rnorm(30, mean = 1, sd = 1),
+  y = 2 + 3 * x + rnorm(30, 0, 1)
+)
+ls_fit = lm(y ~ x, data = sim_data)
+  
+beta0_hat = coef(ls_fit)[1]
+beta1_hat = coef(ls_fit)[2]
+
+## into a function
+sim_regression = function(n, beta0 = 2, beta1 = 3) {
+  
+  sim_data = tibble(
+    x = rnorm(n, mean = 1, sd = 1),
+    y = beta0 + beta1 * x + rnorm(n, 0, 1)
+  )
+  
+  ls_fit = lm(y ~ x, data = sim_data)
+  
+  tibble(
+    beta0_hat = coef(ls_fit)[1],
+    beta1_hat = coef(ls_fit)[2]
+  )
+}
+
+sim_regression(3000,1,2)
+
+```
+
+
+
+## quick example
+```{r}
+read_page_reviews <- function(url) {
+  
+  h = read_html(url)
+  
+  review_titles = h %>%
+    html_nodes("#cm_cr-review_list .review-title") %>%
+    html_text()
+  
+  review_stars = h %>%
+    html_nodes("#cm_cr-review_list .review-rating") %>%
+    html_text() %>%
+    str_extract("\\d") %>%
+    as.numeric()
+  
+  review_text = h %>%
+    html_nodes(".review-data:nth-child(4)") %>%
+    html_text()
+  
+  tibble(
+    title = review_titles,
+    stars = review_stars,
+    text = review_text
+  )
+}
+
+url_base = "https://www.amazon.com/product-reviews/B00005JNBQ/ref=cm_cr_arp_d_viewopt_rvwer?ie=UTF8&reviewerType=avp_only_reviews&sortBy=recent&pageNumber="
+vec_urls = str_c(url_base, 1:5)
+dynamite_reviews = bind_rows(
+  read_page_reviews(vec_urls[1]),
+  read_page_reviews(vec_urls[2]),
+  read_page_reviews(vec_urls[3]),
+  read_page_reviews(vec_urls[4]),
+  read_page_reviews(vec_urls[5])
+)
+
+```
+
+
+
+
+
+
+
