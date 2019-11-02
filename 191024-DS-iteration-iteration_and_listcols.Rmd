@@ -2,7 +2,10 @@
 title: "iteration and listcols"
 author: "Yuqi Miao"
 date: "10/29/2019"
-output: html_document
+output:
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
 ```{r}
@@ -25,6 +28,7 @@ l ## broad collection of all kind of stuff
 ```{r}
 l$mat
 l[[2]] ### use [[]] !
+
 mean(l$vec_numeric)
 ```
 
@@ -73,9 +77,11 @@ for (i in 1:4) {
   output[[i]] = mean_and_sd(df[[i]])
 }
 ```
-# or just
+
+### or just
+
 ```{r}
-outmput <- map(df,mean_and_sd)
+output <- map(df,mean_and_sd)
 ```
 
 # map variant
@@ -84,11 +90,11 @@ outmput <- map(df,mean_and_sd)
 
 ## map varient change the output class
 
-output = map(df, median)
+output = map(df, median) 
 output_median = map_dbl(df,median)
 output_ms = map_df(df,mean_and_sd)
 
-output = map_df(.x = df, ~ mean_and_sd(.x)) ## ~ everything, .x is the df?? .
+output_ms = map_df(.x = df, ~mean_and_sd(.x)) ## ~ everything, .x is the placeholder.
 
 ## output = map2(.x = input_1, .y = input_2, ~func(arg_1 = .x, arg_2 = .y)) 多个变量！
 ```
@@ -136,8 +142,9 @@ output = map(vec_urls,read_page_reviews)
 
 
 
-## list
-```{r}
+# list columns
+
+```{r, message=F}
 weather = 
   rnoaa::meteo_pull_monitors(
     c("USW00094728", "USC00519397", "USS0023B17S"),
@@ -152,7 +159,9 @@ weather =
     tmax = tmax / 10) %>%
   select(name, id, everything())
 ```
-### nest within station
+
+## nest within station
+
 ```{r}
 weather_nest = 
   nest(weather, data = date:tmin) ## 说明那些数据是要保留的，剩下的是分类变量
@@ -169,7 +178,7 @@ weather_nest %>% unnest()
 
 
 
-## operations on a list columns
+# operations on a list columns
 
 
 ```{r}
@@ -182,8 +191,9 @@ lm(tmax~tmin,data = central_park_df)
 weather_lm <- function(df){
     lm(tmax~tmin,data = df)
 }
+## extract as a function <=> write a dedicated function
 
-## extract as a function
+
 output = vector("list", length = 3)
 for (i in 1:3) {
    output[[i]] = weather_lm(weather_nest$data[[i]])
@@ -195,7 +205,7 @@ output = map(weather_nest$data, weather_lm)
 
 
 
-### integrate: 直接在df中使用函数
+## integrate: 直接在df中使用函数
 
 ```{r}
 weather_nest %>% 
@@ -203,7 +213,7 @@ weather_nest %>%
 ```
 
 
-## Revisit napolean
+# example 1: Revisit napolean
 
 ```{r}
 napolran = 
@@ -216,5 +226,31 @@ napolran =
     select(-urls)
     
     
+```
+
+
+
+# example 2: read excel data in chunks
+
+```{r}
+# lotr_cell_ranges = 
+#   tibble(
+#     movie = c("fellowship_ring", "two_towers", "return_king"),
+#     cells = c("B3:D6", "F3:H6", "J3:L6")
+#   )
+# lotr_tidy = 
+#   lotr_cell_ranges %>% 
+#   mutate(
+#     word_data = map(cells, ~readxl::read_excel("./data/LotR_Words.xlsx", # range = .x))
+#   ) %>% 
+#   unnest(cols = word_data) %>% 
+#   janitor::clean_names() %>% 
+#   pivot_longer(
+#     female:male,
+#     names_to = "sex",
+#     values_to = "words") %>%
+#   mutate(race = str_to_lower(race)) %>% 
+#   select(movie, everything(), -cells) 
+
 ```
 
