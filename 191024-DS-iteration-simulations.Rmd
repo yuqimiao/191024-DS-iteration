@@ -2,7 +2,10 @@
 title: "simulation"
 author: "Yuqi Miao"
 date: "10/31/2019"
-output: html_document
+output:
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
 
@@ -27,17 +30,17 @@ sim_regression = function(n,beta0 = 2, beta1 = 3){
 }
 ```
 
-##rerun using for loop
+# rerun using for loop
 
 ```{r}
-output = vector("list", length = 5000)
-for (i in 1:5000) {
+output = vector("list", length = 500)
+for (i in 1:500) {
     output[[i]] = sim_regression(n = 30)
 }
 bind_rows(output) %>% 
     ggplot(aes(x = beta0_hat)) + geom_density()
     
-## be careful! 5000 time and 5000 arguements outcome list
+
 ```
 
 
@@ -45,7 +48,7 @@ bind_rows(output) %>%
 ## rerun simulation using `purrr`
 
 ```{r}
-output <- rerun(5000,sim_regression(n = 30))
+output <- rerun(500,sim_regression(n = 30))
 bind_rows(output) %>% 
     ggplot(aes(x = beta0_hat)) + geom_density()
 ## bind_rows == rbind_list() and rbind_all() 
@@ -59,7 +62,9 @@ sim_results %>%
     ggplot(aes(x = beta0_hat, y = beta1_hat)) + 
     geom_point()
 
+
 ### x 取值于 mean = 0 & mean = 1 normal distribution, huge difference!
+### beta0_hat和beta1_hat 本身就有线性关系， x均值等于0的时候相乘得零只剩随机误差
 
 ```
 
@@ -74,7 +79,8 @@ sim_results %>%
 ```
 
 
-##  try other sample size
+# Simulation: SLR for several ns
+
 
 ```{r}
 n_list = list(
@@ -94,13 +100,24 @@ for (i  in 1:4) {
 }
 
 output
+g_output <- vector("list",length = 4)
+for (i in 1:4) {
+  g_output[[i]] <-  
+    output[[i]] %>% 
+      ggplot(aes(x = beta0_hat))+geom_density()
+  
+}
 output[[4]] %>% 
-    ggplot(aes(x = beta0_hat))+geom_density()  ## sample size bigger,more approximate to normal distribution
+    ggplot(aes(x = beta0_hat))+geom_density()  
+## sample size bigger,more approximate to normal distribution
+g_output[[4]]
 ```
 
 
 
 ## when to bind_rows??
+
+every results from sim_regression is a dataframe with a sample size, so for every sample size, we need to use bind_rows to intergrate the coefficient with same sample size into one dataframe, so our final datafrome would have only 4 rows and 1 columns containing the coresponding coefficient dataframe.
 
 ## intergration
 ```{r}
@@ -134,6 +151,19 @@ sim_results %>%
     ) %>% 
     ggplot(aes(x = beta0_hat, y =beta1_hat)) +
     facet_grid(.~sample_size)+
-    geom_point()
+    geom_violin()
+```
+
+
+```{r}
+sim_results %>% 
+  pivot_longer(
+    beta0_hat:beta1_hat,
+    names_to = "parameter", 
+    values_to = "estimate") %>% 
+  group_by(parameter, sample_size) %>% 
+  summarize(emp_mean = mean(estimate),
+            emp_var = var(estimate)) %>% 
+  knitr::kable(digits = 3)
 ```
 
