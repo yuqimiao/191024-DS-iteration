@@ -1,0 +1,139 @@
+---
+title: "simulation"
+author: "Yuqi Miao"
+date: "10/31/2019"
+output: html_document
+---
+
+
+```{r}
+library(tidyverse)
+set.seed(1)
+```
+
+```{r}
+sim_regression = function(n,beta0 = 2, beta1 = 3){
+    sim_data = tibble(
+        x = rnorm(n, mean =1, sd = 1),
+        y =  beta0 + beta1 * x + rnorm(n, 0, 1)
+    )
+    
+     ls_fit = lm(y ~ x, data = sim_data)
+  
+  tibble(
+    beta0_hat = coef(ls_fit)[1],
+    beta1_hat = coef(ls_fit)[2]
+  )
+}
+```
+
+##rerun using for loop
+
+```{r}
+output = vector("list", length = 5000)
+for (i in 1:5000) {
+    output[[i]] = sim_regression(n = 30)
+}
+bind_rows(output) %>% 
+    ggplot(aes(x = beta0_hat)) + geom_density()
+    
+## be careful! 5000 time and 5000 arguements outcome list
+```
+
+
+
+## rerun simulation using `purrr`
+
+```{r}
+output <- rerun(5000,sim_regression(n = 30))
+bind_rows(output) %>% 
+    ggplot(aes(x = beta0_hat)) + geom_density()
+## bind_rows == rbind_list() and rbind_all() 
+
+
+sim_results = 
+  rerun(100, sim_regression(30, 2, 3)) %>% 
+  bind_rows()
+ 
+sim_results %>% 
+    ggplot(aes(x = beta0_hat, y = beta1_hat)) + 
+    geom_point()
+
+### x 取值于 mean = 0 & mean = 1 normal distribution, huge difference!
+
+```
+
+
+```{r}
+sim_results %>% 
+  gather(key = parameter, value = estimate, beta0_hat:beta1_hat) %>% 
+  group_by(parameter) %>% 
+  summarize(emp_mean = mean(estimate),
+            emp_var = var(estimate)) %>% 
+  knitr::kable(digits = 3)
+```
+
+
+##  try other sample size
+
+```{r}
+n_list = list(
+    "n_30" = 30,
+    "n_60" = 60,
+    "n_120" = 120,
+    "n_240" = 24
+    
+)
+
+output = vector("list",length = 4)
+
+for (i  in 1:4) {
+    output[[i]] = rerun(100, sim_regression(n = n_list[[i]])) %>% 
+        bind_rows
+    
+}
+
+output
+output[[4]] %>% 
+    ggplot(aes(x = beta0_hat))+geom_density()  ## sample size bigger,more approximate to normal distribution
+```
+
+
+
+## when to bind_rows??
+
+## intergration
+```{r}
+sim_results <- 
+    tibble(
+        sample_size = c(30,60,120,240),
+        output_list = map(.x = sample_size, ~rerun(100, sim_regression(n = .x))),
+        output_df= map(output_list, bind_rows)
+    
+) %>% 
+    select(-output_list) %>% 
+    unnest(output_df)
+
+```
+
+
+
+```{r}
+sim_results %>% 
+    group_by(sample_size) %>% 
+    summarise(var_b1 = var(beta0_hat))
+```
+
+
+```{r}
+
+sim_results %>% 
+    mutate(
+        sample_size = str_c("n = ",sample_size),
+        sample_size = fct_inorder(sample_size)
+    ) %>% 
+    ggplot(aes(x = beta0_hat, y =beta1_hat)) +
+    facet_grid(.~sample_size)+
+    geom_point()
+```
+
