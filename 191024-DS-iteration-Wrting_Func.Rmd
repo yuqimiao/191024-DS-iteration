@@ -2,7 +2,10 @@
 title: "iteration"
 author: "Yuqi Miao"
 date: "10/24/2019"
-output: html_document
+output:
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
 ```{r}
@@ -45,15 +48,17 @@ z_score <- function(x) {
 }
 
 
-z_score(sample(c(TRUE, FALSE), 25, replace = TRUE))
-z_score(3)
+# z_score(sample(c(TRUE, FALSE), 25, replace = TRUE))
+# z_score(3)
 
 
 
 ```
 
 
-## Multiple outputs
+# Multiple outputs
+
+* **By using a list to contain all outputs in this function, we can get multiple outputs by using [[]] to index the final list**
 
 ```{r}
 mean_and_sd <- function(input_x){
@@ -70,10 +75,10 @@ mean_and_sd <- function(input_x){
     )
 }
 
-mean_and_sd(x)
+mean_x = mean_and_sd(x)[[1]]
 ```
 
-## multiple input
+# multiple input
 
 ```{r}
 
@@ -102,13 +107,14 @@ sim_regression = function(n, beta0 = 2, beta1 = 3) {
   )
 }
 
-sim_regression(3000,1,2)
+sim_regression(3000,1,2) ## return a data frame( a kind of list)
 
 ```
 
 
 
 ## quick example
+
 ```{r}
 read_page_reviews <- function(url) {
   
@@ -137,17 +143,38 @@ read_page_reviews <- function(url) {
 
 url_base = "https://www.amazon.com/product-reviews/B00005JNBQ/ref=cm_cr_arp_d_viewopt_rvwer?ie=UTF8&reviewerType=avp_only_reviews&sortBy=recent&pageNumber="
 vec_urls = str_c(url_base, 1:5)
-dynamite_reviews = bind_rows(
-  read_page_reviews(vec_urls[1]),
-  read_page_reviews(vec_urls[2]),
-  read_page_reviews(vec_urls[3]),
-  read_page_reviews(vec_urls[4]),
-  read_page_reviews(vec_urls[5])
-)
-
+dynamite_reviews <- vector("list", length = 5)
+for (i in 1:5) {
+  dynamite_reviews[[i]] = bind_rows(
+    dynamite_reviews,
+    read_page_reviews(vec_urls[i])
+  )
+}
 ```
 
 
+# Functions as arguments
+
+```{r}
+x = rnorm(25,0,1)
+my_summary <- function(x, summ_func){
+  summ_func(x)
+}
+my_summary(x,sum)
+my_summary(x,mean)
+```
+
+# global and local
+
+```{r}
+f = function(x) {
+  z = x + y
+  z
+}
+x = 1
+y = 2
+f(x = y)
+```
 
 
 
