@@ -8,21 +8,25 @@ output:
     toc_float: true
 ---
 
+list columns, means the column's *components are lists*, and *map* is used to deal with this kind of columns.
 ```{r}
 library(tidyverse)
 
 set.seed(1)
 ```
-
+list works as broad collection of all kind of stuff, there is no any requirement of the stuff stocking in list, *all lengths, all kinds* are available.
 ```{r}
 vec_numeric = 5:8
-vec_char = c("My", "name", "is", "Jeff")
+vec_char = c("My", "name", "is", "Victoria")
 vec_logical = c(TRUE, TRUE, TRUE, FALSE)
+
 l = list(vec_numeric = 5:8,
-         mat         = matrix(1:8, 2, 4),
-         vec_logical = c(TRUE, FALSE),
-         summary     = summary(rnorm(1000)))
-l ## broad collection of all kind of stuff
+        mat         = matrix(1:8, 2, 4),
+        vec_logical = c(TRUE, FALSE),
+        summary     = summary(rnorm(1000)),
+        plot = ggplot(aes(x,y),data = tibble(x = 1:5, y = 1:5))
+)
+l 
 ```
 
 ```{r}
@@ -74,29 +78,37 @@ mean_and_sd = function(x) {
 output = vector("list", length = 4) ### 创建空集
 
 for (i in 1:4) {
-  output[[i]] = mean_and_sd(df[[i]])
+  output[[i]] = mean_and_sd(df[[i]]) ## use [[]] to find the column at the corresponding location, and function is working on every list
 }
+bind_rows(output)
 ```
 
 ### or just
 
+notice that the output of map is separated list corresponding to every column in the dataest, we need to bind thoses lists to a tibble and use together.
 ```{r}
 output <- map(df,mean_and_sd)
+bind_rows(output)
 ```
 
 # map variant
 
-```{r}
+map varient change *the output class*, which is a kind of quick access for pipeline, but also can cut the pipeline and redefine the class after map.
 
-## map varient change the output class
+Take care of the *map2 function*, always remember to specify the var you want to put in the function, remember to use **.x, .y as placeholder**, and use **~ before the function**, meaning to adhereing to the former placeholder.
+
+```{r}
 
 output = map(df, median) 
 output_median = map_dbl(df,median)
-output_ms = map_df(df,mean_and_sd)
+output_ms = map_df(df,mean_and_sd) ## automatically bind rows
 
 output_ms = map_df(.x = df, ~mean_and_sd(.x)) ## ~ everything, .x is the placeholder.
 
 ## output = map2(.x = input_1, .y = input_2, ~func(arg_1 = .x, arg_2 = .y)) 多个变量！
+class(output_median)
+class(output_ms)
+class(output)
 ```
 
 
@@ -162,6 +174,8 @@ weather =
 
 ## nest within station
 
+Because the station names and id are the same across the year's temp and precip, so by using `nest` function, we use *the name and id as the row name*, and *all other information* integrated to a dataframe column *lies in a single row for each station*.
+
 ```{r}
 weather_nest = 
   nest(weather, data = date:tmin) ## 说明那些数据是要保留的，剩下的是分类变量
@@ -176,12 +190,16 @@ weather_nest$data[[1]]
 weather_nest %>% unnest()
 ```
 
+## **akin to group by?**
 
 
 # operations on a list columns
 
+## making linear regression grouped by nesting keys
 
 ```{r}
+
+
 central_park_df <- weather_nest$data[[1]]
 
 
@@ -198,7 +216,7 @@ output = vector("list", length = 3)
 for (i in 1:3) {
    output[[i]] = weather_lm(weather_nest$data[[i]])
 }
-
+## same as
 output = map(weather_nest$data, weather_lm)
 
 ```
@@ -206,6 +224,7 @@ output = map(weather_nest$data, weather_lm)
 
 
 ## integrate: 直接在df中使用函数
+### add in pipeline
 
 ```{r}
 weather_nest %>% 
@@ -233,24 +252,48 @@ napolran =
 # example 2: read excel data in chunks
 
 ```{r}
-# lotr_cell_ranges = 
-#   tibble(
-#     movie = c("fellowship_ring", "two_towers", "return_king"),
-#     cells = c("B3:D6", "F3:H6", "J3:L6")
-#   )
-# lotr_tidy = 
-#   lotr_cell_ranges %>% 
-#   mutate(
-#     word_data = map(cells, ~readxl::read_excel("./data/LotR_Words.xlsx", # range = .x))
-#   ) %>% 
-#   unnest(cols = word_data) %>% 
-#   janitor::clean_names() %>% 
-#   pivot_longer(
-#     female:male,
-#     names_to = "sex",
-#     values_to = "words") %>%
-#   mutate(race = str_to_lower(race)) %>% 
-#   select(movie, everything(), -cells) 
+lotr_cell_ranges = 
+  tibble(
+    movie = c("fellowship_ring", "two_towers", "return_king"),
+    cells = c("B3:D6", "F3:H6", "J3:L6")
+  )
+
+lotr_tidy = 
+  lotr_cell_ranges %>% 
+  mutate(
+    word_data = map(cells,~readxl::read_excel("LotR_Words.xlsx",range = .x))
+  ) %>% 
+  unnest(cols = word_data) %>% 
+  janitor::clean_names() %>% 
+  pivot_longer(
+    cols = female:male,
+    names_to = "gender",
+    values_to = "count"
+  ) %>% 
+  mutate(race = str_to_lower(race)) %>% 
+  select(movie, everything(), -cells)
+
+lotr_tidy = 
+  lotr_cell_ranges %>% 
+  mutate(
+    word_data = map(cells, ~readxl::read_excel("LotR_Words.xlsx", range = .x))
+  ) %>% 
+  unnest(cols = word_data) %>% 
+  janitor::clean_names() %>% 
+  pivot_longer(
+    female:male,
+    names_to = "sex",
+    values_to = "words") %>%
+  mutate(race = str_to_lower(race)) %>% 
+  select(movie, everything(), -cells) 
 
 ```
+
+
+The final tidy data should looks like:
+1. no columns has the same attributes but not be pivot_londer;
+2. all the variable names and characters should follow the same criteria: lower case and adhered by "_"
+3. every variable has clear and right class
+
+
 
