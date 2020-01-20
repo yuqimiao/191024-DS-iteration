@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
@@ -1406,6 +1405,7 @@ summary {
   border: none;
   display: inline-block;
   border-radius: 4px;
+  background-color: transparent;
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li {
@@ -1434,6 +1434,12 @@ summary {
 }
 }
 
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
 
 .toc-content {
   padding-left: 30px;
@@ -1512,14 +1518,14 @@ div.tocify {
 
 
 <pre class="r"><code>library(tidyverse)</code></pre>
-<pre><code>## ── Attaching packages ──────────────────────────────────────── tidyverse 1.2.1 ──</code></pre>
-<pre><code>## ✔ ggplot2 3.2.1     ✔ purrr   0.3.2
-## ✔ tibble  2.1.3     ✔ dplyr   0.8.3
-## ✔ tidyr   1.0.0     ✔ stringr 1.4.0
-## ✔ readr   1.3.1     ✔ forcats 0.4.0</code></pre>
-<pre><code>## ── Conflicts ─────────────────────────────────────────── tidyverse_conflicts() ──
-## ✖ dplyr::filter() masks stats::filter()
-## ✖ dplyr::lag()    masks stats::lag()</code></pre>
+<pre><code>## ── Attaching packages ───────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──</code></pre>
+<pre><code>## ✓ ggplot2 3.2.1     ✓ purrr   0.3.3
+## ✓ tibble  2.1.3     ✓ dplyr   0.8.3
+## ✓ tidyr   1.0.0     ✓ stringr 1.4.0
+## ✓ readr   1.3.1     ✓ forcats 0.4.0</code></pre>
+<pre><code>## ── Conflicts ──────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+## x dplyr::filter() masks stats::filter()
+## x dplyr::lag()    masks stats::lag()</code></pre>
 <pre class="r"><code>library(rvest)</code></pre>
 <pre><code>## Loading required package: xml2</code></pre>
 <pre><code>## 
@@ -1530,6 +1536,7 @@ div.tocify {
 <pre><code>## The following object is masked from 'package:readr':
 ## 
 ##     guess_encoding</code></pre>
+<pre class="r"><code>set.seed(1)</code></pre>
 <div id="writing-functions" class="section level1">
 <h1>writing functions</h1>
 <div id="get-started" class="section level2">
@@ -1547,25 +1554,30 @@ z2_trans &lt;- z_score(x2)</code></pre>
 </div>
 <div id="try-out" class="section level3">
 <h3>try out</h3>
-<pre class="r"><code>z_score &lt;- function(x) {
-    if(!is.numeric(x)){
-        stop(&quot;x should be numeric&quot;)
-    }else if(length(x)&lt;3){
-        stop(&quot;x should be longer than 3&quot;)
-    }
-   (x-mean(x))/sd(x)
+<pre class="r"><code># z_score(sample(c(TRUE, FALSE), 25, replace = TRUE))
+# z_score(3)
+
+## This can also used to debug the function
+z_score &lt;- function(x){
+  if(!as.numeric(x)){
+    stop(&quot;x should be a number&quot;)
+  }else if(length(x)&lt;3){
+    stop(&quot;x should be longer than 3&quot;)
+  }
+  (x-mean(x))/sd(x)
 }
-
-
-# z_score(sample(c(TRUE, FALSE), 25, replace = TRUE))
-# z_score(3)</code></pre>
+z_score(rnorm(10))</code></pre>
+<pre><code>## Warning in if (!as.numeric(x)) {: the condition has length &gt; 1 and only the
+## first element will be used</code></pre>
+<pre><code>##  [1]  1.5134312 -0.3805677  0.1850884 -0.3283908 -0.9268667 -0.2036246
+##  [7] -1.7506882  0.7870873 -0.2312013  1.3357325</code></pre>
 </div>
 </div>
 </div>
 <div id="multiple-outputs" class="section level1">
 <h1>Multiple outputs</h1>
 <ul>
-<li><strong>By using a list to contain all outputs in this function, we can get multiple outputs by using [[]] to index the final list</strong></li>
+<li><strong>By using a list or a tibble to contain all outputs in this function, we can get multiple outputs by using [[]] to index the final list</strong></li>
 </ul>
 <pre class="r"><code>mean_and_sd &lt;- function(input_x){
     if(!is.numeric(x)){
@@ -1581,42 +1593,46 @@ z2_trans &lt;- z_score(x2)</code></pre>
     )
 }
 
-mean_x = mean_and_sd(x)[[1]]</code></pre>
+mean_and_sd = function(x){
+  if(!is.numeric(x)){
+    stop(&quot;x should be numeric&quot;)
+  }else if(length(x)&lt;2){
+    stop(&quot;length of x should be longer than 1&quot;)
+  }
+  mean = mean(x)
+  sd = sd(x)
+  tibble(
+    mean = mean, ## in essential, tibble is also a list
+    sd = sd
+  )
+}
+set.seed(1)
+mean_and_sd(rnorm(10))[[1]]</code></pre>
+<pre><code>## [1] 0.1322028</code></pre>
 </div>
 <div id="multiple-input" class="section level1">
 <h1>multiple input</h1>
 <pre class="r"><code>sim_data = tibble(
-  x = rnorm(30, mean = 1, sd = 1),
-  y = 2 + 3 * x + rnorm(30, 0, 1)
+  x = rnorm(10,3,3),
+  y = 3 + 10*x + rnorm(10,0,2)
 )
-ls_fit = lm(y ~ x, data = sim_data)
-  
-beta0_hat = coef(ls_fit)[1]
-beta1_hat = coef(ls_fit)[2]
+ls_fit = lm(y~x, data = sim_data)
 
-## into a function
-sim_regression = function(n, beta0 = 2, beta1 = 3) {
-  
+sim_reg = function(n, beta0 = 3, beta1 = 10){
   sim_data = tibble(
-    x = rnorm(n, mean = 1, sd = 1),
-    y = beta0 + beta1 * x + rnorm(n, 0, 1)
+    x = rnorm(n,3,3),
+    y = beta0 + beta1*x + rnorm(n,0,1)
   )
-  
-  ls_fit = lm(y ~ x, data = sim_data)
-  
-  tibble(
-    beta0_hat = coef(ls_fit)[1],
-    beta1_hat = coef(ls_fit)[2]
-  )
+  ls_fit = lm(y~x, data = sim_data)
+  coef(ls_fit)
 }
 
-sim_regression(3000,1,2) ## return a data frame( a kind of list)</code></pre>
-<pre><code>## # A tibble: 1 x 2
-##   beta0_hat beta1_hat
-##       &lt;dbl&gt;     &lt;dbl&gt;
-## 1      1.04      1.99</code></pre>
+sim_reg(300,1,2)</code></pre>
+<pre><code>## (Intercept)           x 
+##   0.9984527   1.9927575</code></pre>
 <div id="quick-example" class="section level2">
 <h2>quick example</h2>
+<p>unsuccessful case, for the url cannot be scraping, why?</p>
 <pre class="r"><code>read_page_reviews &lt;- function(url) {
   
   h = read_html(url)
@@ -1646,11 +1662,23 @@ url_base = &quot;https://www.amazon.com/product-reviews/B00005JNBQ/ref=cm_cr_arp
 vec_urls = str_c(url_base, 1:5)
 dynamite_reviews &lt;- vector(&quot;list&quot;, length = 5)
 for (i in 1:5) {
-  dynamite_reviews[[i]] = bind_rows(
-    dynamite_reviews,
-    read_page_reviews(vec_urls[i])
-  )
-}</code></pre>
+  dynamite_reviews[[i]] = read_page_reviews(vec_urls[i])
+  
+}
+bind_rows(dynamite_reviews)</code></pre>
+<pre><code>## # A tibble: 10 x 3
+##    title                                           stars text                   
+##    &lt;chr&gt;                                           &lt;dbl&gt; &lt;chr&gt;                  
+##  1 &quot;\n\n\n\n\n\n\n\n  \n  \n    Amazingly stupid.…     5 Format: Prime VideoVer…
+##  2 &quot;\n\n\n\n\n\n\n\n  \n  \n    All teenagers nee…     5 Format: Prime VideoVer…
+##  3 &quot;\n\n\n\n\n\n\n\n  \n  \n    Its a classic!\n …     5 Format: Prime VideoVer…
+##  4 &quot;\n\n\n\n\n\n\n\n  \n  \n    Good teen humor\n…     5 Format: Prime VideoVer…
+##  5 &quot;\n\n\n\n\n\n\n\n  \n  \n    Best Movie of All…     5 Format: Prime VideoVer…
+##  6 &quot;\n\n\n\n\n\n\n\n  \n  \n    great funny movie…     5 Format: Prime VideoVer…
+##  7 &quot;\n\n\n\n\n\n\n\n  \n  \n    Perfect transacti…     5 Format: Prime VideoVer…
+##  8 &quot;\n\n\n\n\n\n\n\n  \n  \n    Classic an funny!…     5 Format: Blu-rayVerifie…
+##  9 &quot;\n\n\n\n\n\n\n\n  \n  \n    I can watch this …     5 Format: Prime VideoVer…
+## 10 &quot;\n\n\n\n\n\n\n\n  \n  \n    Great quality!\n …     5 Format: Blu-rayVerifie…</code></pre>
 </div>
 </div>
 <div id="functions-as-arguments" class="section level1">
@@ -1660,19 +1688,26 @@ my_summary &lt;- function(x, summ_func){
   summ_func(x)
 }
 my_summary(x,sum)</code></pre>
-<pre><code>## [1] 3.549119</code></pre>
+<pre><code>## [1] -9.999211</code></pre>
 <pre class="r"><code>my_summary(x,mean)</code></pre>
-<pre><code>## [1] 0.1419647</code></pre>
+<pre><code>## [1] -0.3999684</code></pre>
 </div>
 <div id="global-and-local" class="section level1">
 <h1>global and local</h1>
 <pre class="r"><code>f = function(x) {
-  z = x + y
+  z = x + y 
   z
 }
 x = 1
 y = 2
 f(x = y)</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre class="r"><code>## global var can be used in a fucntion, but it would be hard to track, so try not to use the same name!
+a = 1
+b = 2
+f(x = a) # z = a+y</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre class="r"><code>f(x = b) # z = b+y</code></pre>
 <pre><code>## [1] 4</code></pre>
 </div>
 
