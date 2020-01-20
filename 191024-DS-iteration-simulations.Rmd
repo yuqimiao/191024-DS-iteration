@@ -17,7 +17,7 @@ set.seed(1)
 ```{r}
 sim_regression = function(n,beta0 = 2, beta1 = 3){
     sim_data = tibble(
-        x = rnorm(n, mean =1, sd = 1),
+        x = rnorm(n, mean = -4, sd = 1),
         y =  beta0 + beta1 * x + rnorm(n, 0, 1)
     )
     
@@ -31,7 +31,9 @@ sim_regression = function(n,beta0 = 2, beta1 = 3){
 ```
 
 # rerun using for loop
-
+different from map, 
+  for map, we are using this function to a dataframe, 
+  but simulation needs to generating data of certain amount under a specific rule and get the new dataframe
 ```{r}
 output = vector("list", length = 500)
 for (i in 1:500) {
@@ -49,6 +51,8 @@ bind_rows(output) %>%
 
 ```{r}
 output <- rerun(500,sim_regression(n = 30))
+## equals to the former for loop, give the results in list format, separated by times 
+
 bind_rows(output) %>% 
     ggplot(aes(x = beta0_hat)) + geom_density()
 ## bind_rows == rbind_list() and rbind_all() 
@@ -56,7 +60,7 @@ bind_rows(output) %>%
 
 sim_results = 
   rerun(100, sim_regression(30, 2, 3)) %>% 
-  bind_rows()
+  bind_rows() ## always remember to use bind_rows!
  
 sim_results %>% 
     ggplot(aes(x = beta0_hat, y = beta1_hat)) + 
@@ -64,14 +68,15 @@ sim_results %>%
 
 
 ### x 取值于 mean = 0 & mean = 1 normal distribution, huge difference!
-### beta0_hat和beta1_hat 本身就有线性关系， x均值等于0的时候相乘得零只剩随机误差
+### beta0_hat和beta1_hat 本身就有线性关系， x均值等于0的时候相乘得零只剩随机误差， x均值越大，线性关系越明显
 
 ```
 
 
 ```{r}
 sim_results %>% 
-  gather(key = parameter, value = estimate, beta0_hat:beta1_hat) %>% 
+  pivot_longer(cols = beta0_hat:beta1_hat, names_to = "parameter", values_to = "estimate") %>% 
+  # == gather(key = parameter, value = estimate, beta0_hat:beta1_hat) %>% 
   group_by(parameter) %>% 
   summarize(emp_mean = mean(estimate),
             emp_var = var(estimate)) %>% 
@@ -118,6 +123,34 @@ g_output[[4]]
 ## when to bind_rows??
 
 every results from sim_regression is a dataframe with a sample size, so for every sample size, we need to use bind_rows to intergrate the coefficient with same sample size into one dataframe, so our final datafrome would have only 4 rows and 1 columns containing the coresponding coefficient dataframe.
+
+```{r}
+sim = 
+  tibble(
+    size = seq(30,120,by = 30)
+  ) %>% 
+  mutate(
+    estimates_list = map(.x = size,.f = ~rerun(100,sim_regression(n = .x))),
+    estimates = map(.x = estimates_list, ~bind_rows(.x))
+  ) %>% 
+  select(-estimates_list) %>% 
+  unnest(estimates) %>% 
+  pivot_longer(
+    cols = beta0_hat:beta1_hat,
+    names_to = "parameters",
+    values_to = "estimates"
+  )
+sim %>%  
+  filter(parameters == "beta1_hat") %>% 
+  ggplot(aes(x = estimates)) + 
+  geom_density() +
+  facet_grid(.~size)
+
+sim %>% 
+  group_by(parameters, size) %>% 
+  summarize(sd = sd(estimates),mean = mean(estimates))
+```
+
 
 ## intergration
 ```{r}
